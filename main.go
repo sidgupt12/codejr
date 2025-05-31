@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
@@ -12,6 +13,22 @@ import (
 	"gorm.io/gorm"
 )
 
+
+// app was starting before the database was ready, so we need to retry
+func connectWithRetry(dsn string, retries int, delay time.Duration) (*gorm.DB, error) {
+  var db *gorm.DB
+  var err error
+  for i := 0; i < retries; i++ {
+    db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+    if err == nil {
+      return db, nil
+    }
+    log.Printf("DB connect failed: %v. Retrying in %v...", err, delay)
+    time.Sleep(delay)
+  }
+  return nil, err
+}
+
 func main() {
 
 	err := godotenv.Load()
@@ -19,9 +36,11 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	db, err := gorm.Open(mysql.Open(os.Getenv("DB_URL")), &gorm.Config{})
+	dsn := os.Getenv("DB_URL")
+
+	db, err := connectWithRetry(dsn, 10, 3*time.Second)  
 	if err != nil {
-		log.Fatal("Error connecting to database")
+		log.Fatal("Error connecting to database after retries:", err)
 	}
 	log.Println("connected to db")
 
@@ -38,6 +57,6 @@ func main() {
 	app := fiber.New()
 	routes.SetupRoutes(app, db)
 
-	app.Listen(":" + os.Getenv("PORT"))
+	app.Listen("0.0.0.0:" + os.Getenv("PORT"))
 
 }
