@@ -8,6 +8,12 @@ import (
 	"gorm.io/gorm"
 )
 
+type NoteResponse struct {
+	ID      int    `json:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
 func CreateNote(db *gorm.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		userID := c.Locals("userID").(int)
@@ -66,6 +72,9 @@ func GetNotes(db *gorm.DB) fiber.Handler {
 			query = query.Where("title LIKE ?", likeSearch)
 		}
 
+		var total int64
+		query.Model(&models.Note{}).Count(&total)
+
 		if err := query.
 			Limit(limit).
 			Offset(offset).
@@ -75,7 +84,49 @@ func GetNotes(db *gorm.DB) fiber.Handler {
 			})
 		}
 
-		return c.JSON(notes)
+		// Convert to response format
+		var response []NoteResponse
+		for _, note := range notes {
+			response = append(response, NoteResponse{
+				ID:      note.ID,
+				Title:   note.Title,
+				Content: note.Content,
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"data": response,
+			"meta": fiber.Map{
+				"page":  page,
+				"limit": limit,
+				"total": total,
+				"pages": int((total + int64(limit) - 1) / int64(limit)),
+			},
+		})
+	}
+}
+
+func GetNoteById(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		userID := c.Locals("userID").(int)
+		noteID := c.Params("id")
+
+		var note models.Note
+		if err := db.Where("id = ? AND user_id = ?", noteID, userID).First(&note).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+					"error": "Note not found",
+				})
+			}
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to fetch note",
+			})
+		}
+		return c.JSON(fiber.Map{
+			"id":      note.ID,
+			"title":   note.Title,
+			"content": note.Content,
+		})
 	}
 }
 

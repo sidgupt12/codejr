@@ -20,6 +20,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 
 	notes.Post("/", handlers.CreateNote(db))
 	notes.Get("/", handlers.GetNotes(db))
+	notes.Get("/:id", handlers.GetNoteById(db))
 	notes.Put("/:id", handlers.UpdateNote(db))
 	notes.Delete("/:id", handlers.DeleteNote(db))
 
