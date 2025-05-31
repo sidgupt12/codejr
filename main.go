@@ -30,6 +30,11 @@ func main() {
 		log.Fatal("Failed to migrate:", err)
 	}
 
+	err = db.AutoMigrate(&models.Note{})
+	if err != nil {
+		log.Fatal("Failed to migrate:", err)
+	}
+
 	app := fiber.New()
 	routes.SetupRoutes(app, db)
 
