@@ -16,7 +16,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	// Note Routes
 
 	// protecting routes by forming groups
-	notes := app.Group("/note", middleware.Protect())
+	notes := app.Group("/notes", middleware.Protect())
 
 	notes.Post("/", handlers.CreateNote(db))
 	notes.Get("/", handlers.GetNotes(db))
