@@ -9,7 +9,7 @@ import (
 
 func Protect() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		authHeader := c.Get("Authorizaton")
+		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Authorization Header is required",
